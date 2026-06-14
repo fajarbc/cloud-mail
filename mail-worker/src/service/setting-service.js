@@ -9,6 +9,7 @@ import BizError from '../error/biz-error';
 import {t} from '../i18n/i18n'
 import verifyRecordService from './verify-record-service';
 import userContext from '../security/user-context';
+import domainUtils from "../utils/domain-uitls";
 
 const settingService = {
 
@@ -166,6 +167,17 @@ const settingService = {
 		params.smtpConfigs = JSON.stringify(smtpConfigs);
 		await orm(c).update(setting).set({ ...params }).returning().get();
 		await this.refresh(c);
+
+		const botToken = params.tgBotToken || settingData.tgBotToken;
+		const domain = params.customDomain || settingData.customDomain;
+		if (botToken && domain) {
+			const webhookUrl = `${domainUtils.toOssDomain(domain)}/api/telegram/webhook`;
+			try {
+				await fetch(`https://api.telegram.org/bot${botToken}/setWebhook?url=${encodeURIComponent(webhookUrl)}`);
+			} catch (e) {
+				console.error(`Failed to set Telegram webhook:`, e.message);
+			}
+		}
 	},
 
 	async deleteBackground(c) {
@@ -226,6 +238,22 @@ const settingService = {
 		const settingRow = await this.get(c, true);
 		const token = await userContext.getToken(c);
 
+		let languages = c.env.languages;
+		if (typeof languages === 'string') {
+			try {
+				languages = JSON.parse(languages);
+			} catch (error) {
+				languages = languages.split(',').map(s => s.trim()).filter(Boolean);
+			}
+		}
+		if (!Array.isArray(languages) || languages.length === 0) {
+			languages = ['en', 'zh'];
+		}
+		languages = languages.map(l => String(l).trim()).filter(Boolean);
+		if (languages.length === 0) {
+			languages = ['en'];
+		}
+
 		return {
 			register: settingRow.register,
 			title: settingRow.title,
@@ -256,7 +284,10 @@ const settingService = {
 			linuxdoCallbackUrl: settingRow.linuxdoCallbackUrl,
 			linuxdoSwitch: settingRow.linuxdoSwitch,
 			minEmailPrefix: settingRow.minEmailPrefix,
-			projectLink: settingRow.projectLink
+			projectLink: settingRow.projectLink,
+			tgBotUsername: settingRow.tgBotUsername,
+			languages,
+			defaultLang: languages[0]
 		};
 	},
 

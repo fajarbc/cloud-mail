@@ -25,6 +25,8 @@
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item v-if="hasPerm('email:send')" @click="openSetName(item)">{{ $t('rename') }}</el-dropdown-item>
+                    <el-dropdown-item v-if="hasPerm('telegram:set')" @click="openSetTgChatId(item)">{{ $t('telegramId') }}</el-dropdown-item>
+                    <el-dropdown-item v-if="hasPerm('telegram:set') && item.tgChatId" @click="unlinkTgChatId(item)">{{ $t('unlink') }}</el-dropdown-item>
                     <el-dropdown-item v-if="item.accountId !== userStore.user.account.accountId" @click="setAsTop(item, index)">{{ $t('pin') }}</el-dropdown-item>
                     <el-dropdown-item v-if="item.accountId !== userStore.user.account.accountId && hasPerm('account:delete')"
                                       @click="remove(item)">{{ $t('delete') }}
@@ -123,6 +125,19 @@
         </el-button>
       </div>
     </el-dialog>
+    <el-dialog v-model="setTgChatIdShow" :title="$t('telegramId')">
+      <div class="container">
+        <el-input v-model="tgChatId" type="text" :placeholder="$t('telegramIdPlaceholder')" autocomplete="off" clearable>
+        </el-input>
+        <div class="telegram-help" v-if="settingStore.settings.tgBotUsername">
+          <span>{{ $t('telegramIdGuide') }}</span>
+          <a :href="telegramBotLink" target="_blank">{{ telegramBotUsername }}</a>
+        </div>
+        <el-button class="btn" type="primary" @click="setTgChatId" :loading="setTgChatIdLoading"
+        >{{ $t('save') }}
+        </el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 <script setup>
@@ -134,7 +149,8 @@ import {
   accountDelete,
   accountSetName,
   accountSetAllReceive,
-  accountSetAsTop
+  accountSetAsTop,
+  accountSetTgChatId
 } from "@/request/account.js";
 import {sleep} from "@/utils/time-utils.js"
 import {isEmail} from "@/utils/verify-utils.js";
@@ -154,6 +170,14 @@ const emailStore = useEmailStore();
 const showAdd = ref(false)
 const addLoading = ref(false);
 const domainList = computed(() => settingStore.domainList)
+const telegramBotUsername = computed(() => {
+  const username = settingStore.settings.tgBotUsername || ''
+  return username.startsWith('@') ? username : `@${username}`
+})
+const telegramBotLink = computed(() => {
+  const username = telegramBotUsername.value.replace('@', '')
+  return username ? `https://t.me/${username}` : ''
+})
 const accounts = reactive([])
 const noLoading = ref(false)
 const loading = ref(false)
@@ -161,6 +185,9 @@ const followLoading = ref(false);
 const verifyShow = ref(false)
 const setNameShow = ref(false)
 const setNameLoading = ref(false)
+const setTgChatIdShow = ref(false)
+const setTgChatIdLoading = ref(false)
+const tgChatId = ref('')
 const accountName = ref(null)
 const addRef = ref({})
 const scrollbarRef = ref({})
@@ -270,6 +297,45 @@ function openSetName(accountItem) {
   setNameShow.value = true
 }
 
+function openSetTgChatId(accountItem) {
+  tgChatId.value = accountItem.tgChatId || ''
+  account = accountItem
+  setTgChatIdShow.value = true
+}
+
+function setTgChatId() {
+  const tgId = tgChatId.value
+  setTgChatIdLoading.value = true
+  accountSetTgChatId(account.accountId, tgId).then(() => {
+    account.tgChatId = tgId
+    setTgChatIdShow.value = false
+    ElMessage({
+      message: t('saveSuccessMsg'),
+      type: "success",
+      plain: true
+    })
+  }).finally(() => {
+    setTgChatIdLoading.value = false
+  })
+}
+
+function unlinkTgChatId(accountItem) {
+  ElMessageBox.confirm(t('telegramIdUnlinkConfirm'), {
+    confirmButtonText: t('confirm'),
+    cancelButtonText: t('cancel'),
+    type: 'warning'
+  }).then(() => {
+    accountSetTgChatId(accountItem.accountId, '').then(() => {
+      accountItem.tgChatId = ''
+      ElMessage({
+        message: t('saveSuccessMsg'),
+        type: "success",
+        plain: true
+      })
+    })
+  })
+}
+
 function setAllReceive(account) {
   let allReceiveAccount = accounts.find(account => account.allReceive === AccountAllReceiveEnum.ENABLED);
   if (allReceiveAccount && allReceiveAccount.accountId !== account.accountId) allReceiveAccount.allReceive = AccountAllReceiveEnum.DISABLED;
@@ -293,7 +359,7 @@ function setAllReceive(account) {
 
 
 function showNullSetting(item) {
-  return !hasPerm('email:send') && !(item.accountId !== userStore.user.account.accountId && hasPerm('account:delete'))
+  return !hasPerm('telegram:set') && !hasPerm('email:send') && !(item.accountId !== userStore.user.account.accountId && hasPerm('account:delete'))
 }
 
 function itemBg(accountId) {
@@ -662,6 +728,18 @@ path[fill="#ffdda1"] {
 
 .add-email-turnstile {
   margin-top: 15px;
+}
+
+.telegram-help {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #909399;
+  a {
+    color: #409eff;
+    text-decoration: none;
+    margin-left: 4px;
+    font-weight: bold;
+  }
 }
 
 .turnstile-show {

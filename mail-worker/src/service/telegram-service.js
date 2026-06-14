@@ -1,5 +1,6 @@
 import orm from '../entity/orm';
 import email from '../entity/email';
+import account from '../entity/account';
 import settingService from './setting-service';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -47,7 +48,19 @@ const telegramService = {
 
 		const { tgBotToken, tgChatId, customDomain, tgMsgTo, tgMsgFrom, tgMsgText } = await settingService.query(c);
 
-		const tgChatIds = tgChatId.split(',');
+		let targetTgChatId = tgChatId;
+		if (email.accountId) {
+			const accountRow = await orm(c).select().from(account).where(eq(account.accountId, email.accountId)).get();
+			if (accountRow && accountRow.tgChatId && accountRow.tgChatId.trim()) {
+				targetTgChatId = accountRow.tgChatId.trim();
+			}
+		}
+
+		if (!targetTgChatId) {
+			return;
+		}
+
+		const tgChatIds = targetTgChatId.split(',');
 
 		const jwtToken = await jwtUtils.generateToken(c, { emailId: email.emailId })
 
@@ -93,6 +106,48 @@ const telegramService = {
 				console.error(`转发 Telegram 失败:`, e.message);
 			}
 		}));
+
+	},
+
+	async handleWebhook(c, payload) {
+
+		const { tgBotToken } = await settingService.query(c);
+
+		if (!tgBotToken) {
+			return;
+		}
+
+		const message = payload?.message;
+
+		if (!message || !message.text || !message.chat) {
+			return;
+		}
+
+		const text = message.text.trim();
+
+		if (!text.startsWith('/start')) {
+			return;
+		}
+
+		const chatId = message.chat.id;
+
+		const replyText = `Your Telegram ID:\n<code>${chatId}</code>\n\nCopy this ID into your email settings to receive email notifications here.`;
+
+		try {
+			await fetch(`https://api.telegram.org/bot${tgBotToken}/sendMessage`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					chat_id: chatId,
+					parse_mode: 'HTML',
+					text: replyText
+				})
+			});
+		} catch (e) {
+			console.error(`Telegram webhook reply failed:`, e.message);
+		}
 
 	}
 

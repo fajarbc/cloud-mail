@@ -40,6 +40,7 @@ orm_log = false			#Whether to enable SQL logging
 domain = ["example.com"]				#Email domains; multiple values supported. Example: ["example1.com","example2.com"]
 admin = "admin@example.com"				#Admin email. Example: admin@example.com
 jwt_secret = "b7f29a1d-18e2-4d3b-941f-f6b2c97c02fd"			#JWT token secret; use any random string
+languages = ["id", "en", "zh", "es", "fr"]				#Available UI languages; the first item is the default. Supported: en, zh, id
 
 [build]
 command = "pnpm --prefix ../mail-vue install && pnpm --prefix ../mail-vue run build"

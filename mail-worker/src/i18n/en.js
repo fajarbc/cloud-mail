@@ -11,6 +11,7 @@ const en = {
 	delMyAccount: 'Cannot delete your own email',
 	noUserAccount: 'This email does not belong to the current user',
 	usernameLengthLimit: 'Username length exceeds the limit',
+	telegramIdLengthLimit: 'Telegram ID length exceeds the limit',
 	noOsSendPic: 'Cannot send body images: object storage not configured',
 	noOsDomainSendAtt: 'Cannot send attachments: object storage domain not configured',
 	noOsSendAtt: 'Cannot send attachments: object storage not configured',
@@ -99,7 +100,8 @@ const en = {
 		"系统设置": "System Settings",
 		"设置查看": "View Settings",
 		"设置修改": "Change Settings",
-		"发件重置": "Reset Send Count"
+		"发件重置": "Reset Send Count",
+		"Telegram ID": "Link Telegram"
 	}
 };
 

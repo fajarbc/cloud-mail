@@ -92,7 +92,7 @@ export async function email(message, env, ctx) {
 		}
 
 		const toName = email.to.find(item => item.address === message.to)?.name || '';
-		const code = await aiService.extractCode({ env }, email, { aiCode, aiCodeFilter });
+		const { code, source } = await aiService.extractCode({ env }, email, { aiCode, aiCodeFilter });
 
 		const params = {
 			toEmail: message.to,
@@ -158,7 +158,8 @@ export async function email(message, env, ctx) {
 		}
 
 		//转发到TG
-		if (tgBotStatus === settingConst.tgBotStatus.OPEN && tgChatId) {
+		if (tgBotStatus === settingConst.tgBotStatus.OPEN) {
+			emailRow.aiSource = source;
 			await telegramService.sendEmailToBot({ env }, emailRow)
 		}
 

@@ -26,3 +26,4 @@ mail-vue/dist
 .wrangler
 .venv
 mail-worker/wrangler.toml
+mail-worker/wrangler-dev.toml

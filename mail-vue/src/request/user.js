@@ -41,3 +41,7 @@ export function userAllAccount(userId, num, size) {
 export function userDeleteAccount(accountId) {
     return http.delete('/user/deleteAccount', {params:{accountId}})
 }
+
+export function userSetAccountTgChatId(accountId, tgChatId) {
+    return http.put('/user/setAccountTgChatId', {accountId, tgChatId})
+}

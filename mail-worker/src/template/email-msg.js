@@ -59,6 +59,11 @@ To：\u200B${escapeHtml(email.toEmail || '')}`
 ${truncateText(text, maxTextLength)}`
 	}
 
+	const aiTag = email.aiSource === 'cf' ? '#cf' : email.aiSource === 'fb' ? '#fb' : '#no';
+	template += `
+
+${aiTag}`;
+
 	return template;
 
 }

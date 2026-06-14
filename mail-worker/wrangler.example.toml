@@ -37,11 +37,15 @@ crons = ["*/30 * * * *", "0 16 * * *"]	#Refresh analysis cache every 30 minutes;
 
 [vars]
 #ai_model = ""			#AI model; defaults to @cf/meta/llama-3.1-8b-instruct when empty
+#ai_fallback_base_url = ""	#OpenAI-compatible base URL used when Workers AI fails. Example: https://openrouter.ai/api/v1
+#ai_fallback_model = ""		#OpenAI-compatible model name. Example: openai/gpt-4o-mini
+#ai_fallback_api_key = ""	#OpenAI-compatible API key. Recommended: set as a secret via `wrangler secret put ai_fallback_api_key`
 #analysis_cache = false			#Whether to enable analysis data caching
 #orm_log = false			#Whether to enable SQL logging
 domain = ["example.com"]				#Email domains; multiple values supported. Example: ["example1.com","example2.com"]
 admin = "admin@example.com"				#Admin email. Example: admin@example.com
 jwt_secret = "your-jwt-secret-string"			#JWT token secret; use any random string
+languages = ["id", "en", "zh", "es", "fr"]				#Available UI languages; the first item is the default. Supported: en, zh, id, es, fr
 
 [build]
 command = "pnpm --prefix ../mail-vue install && pnpm --prefix ../mail-vue run build"

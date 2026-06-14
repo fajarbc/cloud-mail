@@ -70,6 +70,8 @@
 
 - **🤖 人机验证**：集成Turnstile人机验证，防止人机批量注册
 
+- **🌐 多语言支持**：内置 简体中文 / English / Bahasa Indonesia / Español / Français，可通过 `wrangler.toml` 的 `languages` 变量控制可见语言，第一项为默认语言。新增语言只需在 `mail-vue/src/i18n/` 放入 `xx.js`，详见 [i18n 指南](./mail-vue/src/i18n/README.md)。
+
 - **📜 更多功能**：正在开发中...
 
 

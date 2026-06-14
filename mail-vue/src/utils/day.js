@@ -1,15 +1,40 @@
 import dayjs from 'dayjs'
-import 'dayjs/locale/zh-cn'
 import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
 import {useSettingStore} from "@/store/setting.js";
-const settingStore = useSettingStore();
 dayjs.extend(utc)
 dayjs.extend(timezone)
-dayjs.locale(settingStore.lang === 'en' ? 'en' : 'zh-cn')
+
+function dayjsLocaleName(lang) {
+    if (lang === 'zh') return 'zh-cn'
+    return lang || 'en'
+}
+
+const dayjsLocales = import.meta.glob('../../node_modules/dayjs/locale/*.js')
+
+export async function setExtend(lang) {
+    const name = dayjsLocaleName(lang)
+    if (name === 'en') {
+        dayjs.locale('en')
+        return
+    }
+    const loader = dayjsLocales[`../../node_modules/dayjs/locale/${name}.js`]
+    if (loader) {
+        try {
+            await loader()
+            dayjs.locale(name)
+            return
+        } catch (e) {
+            console.error('Failed to load dayjs locale:', name, e)
+        }
+    }
+    dayjs.locale('en')
+}
+
 const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 export function fromNow(date) {
+    const settingStore = useSettingStore();
     const d = dayjs.utc(date).tz(timeZone);
     const now = dayjs();
     const diffSeconds = now.diff(d, 'second');
@@ -33,6 +58,21 @@ export function fromNow(date) {
             ? d.format('MMM D')
             : d.format('YYYY/MM/DD');
 
+
+    } else if (settingStore.lang === 'id') {
+
+        if (isToday) {
+            if (diffSeconds < 60) return `Baru saja`;
+            if (diffMinutes < 60) return `${diffMinutes} menit lalu`;
+            if (diffHours >= 1 && diffHours < 2) return '1 jam lalu';
+            return d.format('HH:mm');
+        }
+        else if (now.subtract(1, 'day').isSame(d, 'day')) {
+            return `Kemarin ${d.format('HH:mm')}`;
+        }
+        return d.year() === now.year()
+            ? d.format('D MMM')
+            : d.format('YYYY/MM/DD');
 
     } else {
 
@@ -66,6 +106,7 @@ export function updateNow(date) {
 }
 
 export function formatDetailDate(time) {
+    const settingStore = useSettingStore();
     const d = dayjs.utc(time).tz(timeZone);
     const now = dayjs();
 
@@ -75,6 +116,10 @@ export function formatDetailDate(time) {
         return isSameYear
             ? d.format('ddd, MMM D, h:mm A')
             : d.format('ddd, MMM D, YYYY, h:mm A');
+    } else if (settingStore.lang === 'id') {
+        return isSameYear
+            ? d.format('ddd, D MMM, HH:mm')
+            : d.format('ddd, D MMM YYYY, HH:mm');
     } else {
         return d.format('YYYY年M月D日 ddd AH:mm');
     }
@@ -86,8 +131,4 @@ export function tzDayjs(time) {
 
 export function toUtc(time) {
     return dayjs(time).utc()
-}
-
-export function setExtend(lang) {
-    dayjs.locale(lang)
 }

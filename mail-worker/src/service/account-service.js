@@ -217,6 +217,28 @@ const accountService = {
 		await orm(c).update(account).set({name}).where(and(eq(account.userId, userId),eq(account.accountId, accountId))).run();
 	},
 
+	async setTgChatId(c, params, userId) {
+		let { tgChatId, accountId } = params
+		tgChatId = (tgChatId || '').trim()
+		if (tgChatId.length > 64) {
+			throw new BizError(t('telegramIdLengthLimit'));
+		}
+		await orm(c).update(account).set({tgChatId}).where(and(eq(account.userId, userId),eq(account.accountId, accountId))).run();
+	},
+
+	async adminSetTgChatId(c, params) {
+		const loginUser = c.get('user')
+		if (!loginUser || loginUser.email !== c.env.admin) {
+			throw new BizError(t('unauthorized'), 403)
+		}
+		let { tgChatId, accountId } = params
+		tgChatId = (tgChatId || '').trim()
+		if (tgChatId.length > 64) {
+			throw new BizError(t('telegramIdLengthLimit'));
+		}
+		await orm(c).update(account).set({tgChatId}).where(eq(account.accountId, accountId)).run();
+	},
+
 	async allAccount(c, params) {
 
 		let { userId, num, size } = params
