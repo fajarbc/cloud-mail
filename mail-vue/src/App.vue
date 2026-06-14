@@ -11,7 +11,10 @@ const settingStore = useSettingStore()
 import('@/icons/index.js')
 const { locale } = useI18n()
 const elLocale = ref(null)
-const localeModules = import.meta.glob('../node_modules/element-plus/es/locale/lang/*.mjs')
+const localeModules = import.meta.glob([
+  '../node_modules/element-plus/es/locale/lang/*.mjs',
+  '!../node_modules/element-plus/es/locale/lang/en.mjs'
+])
 
 function elementLocaleName(lang) {
   if (lang === 'zh') return 'zh-cn'

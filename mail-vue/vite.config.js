@@ -55,7 +55,26 @@ export default defineConfig(({mode}) => {
             target: 'es2022',
             outDir: env.VITE_OUT_DIR || 'dist',
             emptyOutDir: true,
-            assetsInclude: ['**/*.json']
+            assetsInclude: ['**/*.json'],
+            chunkSizeWarningLimit: 1000,
+            rollupOptions: {
+                output: {
+                    manualChunks(id) {
+                        if (id.includes('node_modules')) {
+                            if (id.includes('element-plus')) {
+                                return 'element-plus';
+                            }
+                            if (id.includes('echarts')) {
+                                return 'echarts';
+                            }
+                            if (id.includes('tinymce')) {
+                                return 'tinymce';
+                            }
+                            return 'vendor';
+                        }
+                    }
+                }
+            }
         }
     }
 })

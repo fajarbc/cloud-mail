@@ -31,16 +31,17 @@ const aiService = {
 			];
 
 			let content = await this.extractWithWorkersAi(c, messages);
-			let source = content ? 'cf' : 'no';
+			let code = this.parseCode(content);
+			let source = code ? 'cf' : 'no';
 
-			if (!content) {
+			if (!code) {
 				content = await this.extractWithOpenAiCompatible(c, messages);
-				if (content) {
+				code = this.parseCode(content);
+				if (code) {
 					source = 'fb';
 				}
 			}
 
-			const code = this.parseCode(content);
 			return { code: code || '', source: code ? source : 'no' };
 		} catch (e) {
 			console.error('验证码提取失败: ', e);
