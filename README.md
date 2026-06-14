@@ -116,7 +116,8 @@ cloud-mail
 │   │   ├── utils			    # 工具类
 │   │   └── index.js			# 入口文件
 │   ├── pageckge.json			# 项目依赖
-│   └── wrangler.toml			# 项目配置
+│   ├── wrangler.example.toml		# 示例配置
+│   └── wrangler.toml			# 本地配置（不提交）
 │
 ├── mail-vue				    # vue前端项目
 │   ├── src

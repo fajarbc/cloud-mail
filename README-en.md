@@ -109,7 +109,8 @@ cloud-mail
 │   │   ├── utils			    # Utility functions
 │   │   └── index.js			# Entry point
 │   ├── package.json			# Project dependencies
-│   └── wrangler.toml			# Project configuration
+│   ├── wrangler.example.toml		# Example configuration
+│   └── wrangler.toml			# Local configuration (not committed)
 │
 ├─ mail-vue				        # Frontend Vue project
 │   ├── src

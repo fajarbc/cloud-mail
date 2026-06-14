@@ -1,13 +1,10 @@
-name = "cloud-mail-dev"
+name = "cloud-mail"
 main = "src/index.js"
 compatibility_date = "2025-06-04"
 keep_vars = true
 
 [observability]
 enabled = true
-
-[dev]
-ip = "0.0.0.0"
 
 [[d1_databases]]
 binding = "db"			#D1 database binding name; do not change
@@ -22,6 +19,9 @@ id = ""					#KV namespace ID
 binding = "r2"			#R2 bucket binding name; do not change
 bucket_name = "cloud-mail"		#R2 bucket name
 
+#[[send_email]]
+#name = "email"			#Cloudflare email sending; preferred when configured
+
 #[ai]
 #binding = "ai"
 
@@ -31,14 +31,17 @@ directory = "./dist"	#Built Vue frontend assets directory; default is dist
 not_found_handling = "single-page-application"
 run_worker_first = true
 
-#[[send_email]]
-#name = "email"			#Cloudflare email sending; preferred when configured
+[triggers]
+crons = ["*/30 * * * *", "0 16 * * *"]	#Refresh analysis cache every 30 minutes; run daily task at midnight
 
 
 [vars]
-ai_model = ""			#AI model; defaults to @cf/meta/llama-3.1-8b-instruct when empty
-analysis_cache = false			#Whether to enable analysis data caching
-orm_log = false			#Whether to enable SQL logging
+#ai_model = ""			#AI model; defaults to @cf/meta/llama-3.1-8b-instruct when empty
+#analysis_cache = false			#Whether to enable analysis data caching
+#orm_log = false			#Whether to enable SQL logging
 domain = ["example.com"]				#Email domains; multiple values supported. Example: ["example1.com","example2.com"]
 admin = "admin@example.com"				#Admin email. Example: admin@example.com
 jwt_secret = "your-jwt-secret-string"			#JWT token secret; use any random string
+
+[build]
+command = "pnpm --prefix ../mail-vue install && pnpm --prefix ../mail-vue run build"
