@@ -31,8 +31,27 @@ const dbInit = {
 		await this.v3_0DB(c);
 		await this.v3_2DB(c);
 		await this.v3_3DB(c);
+		await this.v3_4DB(c);
 		await settingService.refresh(c);
 		return c.text('success');
+	},
+
+	async v3_4DB(c) {
+		try {
+			await c.env.db.prepare(`ALTER TABLE setting ADD COLUMN tg_link INTEGER NOT NULL DEFAULT 1;`).run();
+		} catch (e) {
+			console.warn(`Skip setting tg_link: ${e.message}`);
+		}
+		try {
+			await c.env.db.prepare(`ALTER TABLE account ADD COLUMN link_code TEXT NOT NULL DEFAULT '';`).run();
+		} catch (e) {
+			console.warn(`Skip account link_code: ${e.message}`);
+		}
+		try {
+			await c.env.db.prepare(`UPDATE account SET link_code = lower(hex(randomblob(4))) WHERE link_code = '';`).run();
+		} catch (e) {
+			console.warn(`Skip backfill link_code: ${e.message}`);
+		}
 	},
 
 	async v3_3DB(c) {

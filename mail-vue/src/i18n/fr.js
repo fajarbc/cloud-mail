@@ -185,6 +185,8 @@ const fr = {
     tgBotToken: 'Jeton du bot',
     tgBotUsernameDesc: 'Nom d’utilisateur du bot, p. ex. {\'@\'}cloud_mail_bot',
     telegramId: 'ID Telegram',
+    telegramLink: 'Telegram /link',
+    linkCode: 'Code de lien',
     unlink: 'Dissocier',
     telegramIdGuide: 'Envoyez /start au bot pour obtenir votre ID Telegram :',
     telegramIdPlaceholder: 'Saisissez l’ID de chat Telegram',

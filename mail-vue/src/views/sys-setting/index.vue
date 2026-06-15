@@ -560,6 +560,11 @@
                         @add-tag="addChatTag"></el-input-tag>
           <el-input tag-type="warning" :placeholder="$t('customDomainDesc')" v-model="customDomain" ></el-input>
           <div class="tg-msg-label">
+            <span>{{t('telegramLink')}}</span>
+            <el-switch v-model="tgLink" :active-value="0" :inactive-value="1" :active-text="$t('enable')"
+                       :inactive-text="$t('disable')"/>
+          </div>
+          <div class="tg-msg-label">
             <span>{{t('from')}}</span>
             <el-select  v-model="tgMsgFrom" >
               <el-option
@@ -968,6 +973,7 @@ const authRefreshOptions = computed(() => [
 const tgChatId = ref([])
 const customDomain = ref('')
 const tgBotStatus = ref(0)
+const tgLink = ref(1)
 const tgBotToken = ref('')
 const tgBotUsername = ref('')
 const forwardEmail = ref([])
@@ -1131,6 +1137,7 @@ function closedSetBackground() {
 function openTgSetting() {
   const data = setting.value || {}
   tgBotStatus.value = data.tgBotStatus ?? 1
+  tgLink.value = data.tgLink ?? 1
   tgBotToken.value = ''
   tgBotUsername.value = data.tgBotUsername || ''
   customDomain.value = data.customDomain || ''
@@ -1279,6 +1286,7 @@ function tgBotSave() {
   const form = {
     customDomain: customDomain.value,
     tgBotStatus: tgBotStatus.value,
+    tgLink: tgLink.value,
     tgChatId: tgChatId.value + '',
     tgBotUsername: tgBotUsername.value,
     tgMsgFrom: tgMsgFrom.value,

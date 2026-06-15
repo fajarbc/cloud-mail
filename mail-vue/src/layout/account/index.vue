@@ -133,6 +133,12 @@
           <span>{{ $t('telegramIdGuide') }}</span>
           <a :href="telegramBotLink" target="_blank">{{ telegramBotUsername }}</a>
         </div>
+        <div class="link-code-row" v-if="settingStore.settings.tgLink === 0">
+          <span class="link-code-label">{{ $t('linkCode') }}</span>
+          <span class="link-code-value">{{ linkCode || $t('notSet') }}</span>
+          <Icon icon="fluent-color:clipboard-24" width="20" height="20" @click="copyLinkCode"/>
+          <Icon icon="ion:reload" width="16" height="16" color="#909399" :class="{spin: regenerateLoading}" @click="regenerateLinkCode"/>
+        </div>
         <el-button class="btn" type="primary" @click="setTgChatId" :loading="setTgChatIdLoading"
         >{{ $t('save') }}
         </el-button>
@@ -150,7 +156,8 @@ import {
   accountSetName,
   accountSetAllReceive,
   accountSetAsTop,
-  accountSetTgChatId
+  accountSetTgChatId,
+  accountRegenerateLinkCode
 } from "@/request/account.js";
 import {sleep} from "@/utils/time-utils.js"
 import {isEmail} from "@/utils/verify-utils.js";
@@ -188,6 +195,8 @@ const setNameLoading = ref(false)
 const setTgChatIdShow = ref(false)
 const setTgChatIdLoading = ref(false)
 const tgChatId = ref('')
+const linkCode = ref('')
+const regenerateLoading = ref(false)
 const accountName = ref(null)
 const addRef = ref({})
 const scrollbarRef = ref({})
@@ -299,6 +308,7 @@ function openSetName(accountItem) {
 
 function openSetTgChatId(accountItem) {
   tgChatId.value = accountItem.tgChatId || ''
+  linkCode.value = accountItem.linkCode || ''
   account = accountItem
   setTgChatIdShow.value = true
 }
@@ -317,6 +327,40 @@ function setTgChatId() {
   }).finally(() => {
     setTgChatIdLoading.value = false
   })
+}
+
+function regenerateLinkCode() {
+  if (regenerateLoading.value) return
+  regenerateLoading.value = true
+  accountRegenerateLinkCode(account.accountId).then(data => {
+    linkCode.value = data.linkCode
+    account.linkCode = data.linkCode
+    ElMessage({
+      message: t('saveSuccessMsg'),
+      type: "success",
+      plain: true
+    })
+  }).finally(() => {
+    regenerateLoading.value = false
+  })
+}
+
+async function copyLinkCode() {
+  if (!linkCode.value) return
+  try {
+    await navigator.clipboard.writeText(linkCode.value)
+    ElMessage({
+      message: t('copySuccessMsg'),
+      type: 'success',
+      plain: true,
+    })
+  } catch (err) {
+    ElMessage({
+      message: t('copyFailMsg'),
+      type: 'error',
+      plain: true,
+    })
+  }
 }
 
 function unlinkTgChatId(accountItem) {
@@ -740,6 +784,34 @@ path[fill="#ffdda1"] {
     margin-left: 4px;
     font-weight: bold;
   }
+}
+
+.link-code-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: #909399;
+
+  .link-code-value {
+    color: var(--el-text-color-primary);
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+
+  svg {
+    cursor: pointer;
+  }
+
+  .spin {
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .turnstile-show {

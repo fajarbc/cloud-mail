@@ -34,6 +34,12 @@ const saltHashUtils = {
 			result += chars.charAt(Math.floor(Math.random() * chars.length));
 		}
 		return result;
+	},
+
+	genHexCode(bytes = 4) {
+		const array = new Uint8Array(bytes);
+		crypto.getRandomValues(array);
+		return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
 	}
 };
 

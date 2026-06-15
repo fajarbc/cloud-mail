@@ -185,6 +185,8 @@ const id = {
     tgBotToken: 'Token bot',
     tgBotUsernameDesc: 'Nama pengguna bot, mis. {\'@\'}cloud_mail_bot',
     telegramId: 'ID Telegram',
+    telegramLink: 'Telegram /link',
+    linkCode: 'Kode Tautan',
     unlink: 'Putuskan',
     telegramIdGuide: 'Kirim /start ke bot untuk mendapatkan ID Telegram Anda:',
     telegramIdPlaceholder: 'Masukkan ID chat Telegram',

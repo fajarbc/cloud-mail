@@ -185,6 +185,8 @@ const zh = {
     tgBotToken: '机器人 token',
     tgBotUsernameDesc: '机器人用户名，例如 {\'@\'}cloud_mail_bot',
     telegramId: 'Telegram ID',
+    telegramLink: 'Telegram /link',
+    linkCode: '连接码',
     unlink: '解绑',
     telegramIdGuide: '向机器人发送 /start 获取你的 Telegram ID：',
     telegramIdPlaceholder: '请输入 Telegram chat ID',

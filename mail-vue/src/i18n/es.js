@@ -185,6 +185,8 @@ const es = {
     tgBotToken: 'Token del bot',
     tgBotUsernameDesc: 'Nombre de usuario del bot, p. ej. {\'@\'}cloud_mail_bot',
     telegramId: 'ID de Telegram',
+    telegramLink: 'Telegram /link',
+    linkCode: 'Código de enlace',
     unlink: 'Desvincular',
     telegramIdGuide: 'Envía /start al bot para obtener tu ID de Telegram:',
     telegramIdPlaceholder: 'Ingresa el ID de chat de Telegram',

@@ -7,7 +7,9 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 dayjs.extend(utc);
 dayjs.extend(timezone);
-import { eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
+import KvConst from '../const/kv-const';
+import { isDel } from '../const/entity-const';
 import jwtUtils from '../utils/jwt-utils';
 import emailMsgTemplate from '../template/email-msg';
 import emailTextTemplate from '../template/email-text';
@@ -111,7 +113,8 @@ const telegramService = {
 
 	async handleWebhook(c, payload) {
 
-		const { tgBotToken } = await settingService.query(c);
+		const setting = await settingService.query(c);
+		const { tgBotToken } = setting;
 
 		if (!tgBotToken) {
 			return;
@@ -124,15 +127,107 @@ const telegramService = {
 		}
 
 		const text = message.text.trim();
+		const chatId = `${message.chat.id}`;
+		const [command, ...args] = text.split(/\s+/);
+		const normalizedCommand = command.split('@')[0].toLowerCase();
 
-		if (!text.startsWith('/start')) {
+		let replyText = '';
+
+		if (normalizedCommand === '/start' || normalizedCommand === '/help') {
+			replyText = `Your Telegram ID:\n<code>${chatId}</code>\n\nCommands:\n/list - list linked email addresses\n/link user@mail.com link_code - link this chat\n/unlink user@mail.com - unlink this chat`;
+		} else if (normalizedCommand === '/list') {
+			replyText = await this.listLinkedAccounts(c, chatId);
+		} else if (normalizedCommand === '/link') {
+			replyText = await this.linkAccount(c, setting, chatId, args);
+		} else if (normalizedCommand === '/unlink') {
+			replyText = await this.unlinkAccount(c, chatId, args);
+		} else {
 			return;
 		}
 
-		const chatId = message.chat.id;
+		await this.reply(c, tgBotToken, chatId, replyText);
 
-		const replyText = `Your Telegram ID:\n<code>${chatId}</code>\n\nCopy this ID into your email settings to receive email notifications here.`;
+	},
 
+	async listLinkedAccounts(c, chatId) {
+		const rows = await orm(c).select().from(account).where(and(eq(account.isDel, isDel.NORMAL), sql`${account.tgChatId} != ''`)).all();
+		const linkedRows = rows.filter(row => this.parseChatIds(row.tgChatId).includes(chatId));
+		if (linkedRows.length === 0) {
+			return 'No email address is linked to this Telegram chat.';
+		}
+		return `Linked email addresses:\n${linkedRows.map(row => `- ${this.escapeHtml(row.email)}`).join('\n')}`;
+	},
+
+	async linkAccount(c, setting, chatId, args) {
+		if (setting.tgLink !== 0) {
+			return 'Telegram linking is disabled by the administrator.';
+		}
+		const limited = await this.isLinkRateLimited(c, chatId);
+		if (limited) {
+			return 'Too many link attempts. Please try again later.';
+		}
+		const [emailArg, linkCodeArg] = args;
+		const emailValue = (emailArg || '').trim();
+		const linkCode = (linkCodeArg || '').trim().toLowerCase();
+		if (!verifyUtils.isEmail(emailValue) || !/^[0-9a-f]{8}$/.test(linkCode)) {
+			return 'Usage: /link user@mail.com link_code';
+		}
+		const accountRow = await orm(c).select().from(account).where(and(sql`${account.email} COLLATE NOCASE = ${emailValue}`, eq(account.linkCode, linkCode), eq(account.isDel, isDel.NORMAL))).get();
+		if (!accountRow) {
+			return 'Invalid email or link code.';
+		}
+		const chatIds = this.parseChatIds(accountRow.tgChatId);
+		if (!chatIds.includes(chatId)) {
+			chatIds.push(chatId);
+			await orm(c).update(account).set({tgChatId: chatIds.join(',')}).where(eq(account.accountId, accountRow.accountId)).run();
+		}
+		return `Linked ${this.escapeHtml(accountRow.email)}.`;
+	},
+
+	async unlinkAccount(c, chatId, args) {
+		const [emailArg] = args;
+		const emailValue = (emailArg || '').trim();
+		if (!verifyUtils.isEmail(emailValue)) {
+			return 'Usage: /unlink user@mail.com';
+		}
+		const accountRow = await orm(c).select().from(account).where(and(sql`${account.email} COLLATE NOCASE = ${emailValue}`, eq(account.isDel, isDel.NORMAL))).get();
+		if (!accountRow) {
+			return 'Email address not found.';
+		}
+		const chatIds = this.parseChatIds(accountRow.tgChatId).filter(id => id !== chatId);
+		if (chatIds.length === this.parseChatIds(accountRow.tgChatId).length) {
+			return `This chat is not linked to ${this.escapeHtml(accountRow.email)}.`;
+		}
+		await orm(c).update(account).set({tgChatId: chatIds.join(',')}).where(eq(account.accountId, accountRow.accountId)).run();
+		return `Unlinked ${this.escapeHtml(accountRow.email)}.`;
+	},
+
+	async isLinkRateLimited(c, chatId) {
+		const minuteKey = `${KvConst.TG_LINK_RATE}${chatId}:minute`;
+		const dayKey = `${KvConst.TG_LINK_RATE}${chatId}:day:${dayjs().tz('Asia/Shanghai').format('YYYY-MM-DD')}`;
+		const [minuteCount, dayCount] = await Promise.all([
+			c.env.kv.get(minuteKey),
+			c.env.kv.get(dayKey)
+		]);
+		if (Number(minuteCount || 0) >= 10 || Number(dayCount || 0) >= 100) {
+			return true;
+		}
+		await Promise.all([
+			c.env.kv.put(minuteKey, `${Number(minuteCount || 0) + 1}`, { expirationTtl: 60 }),
+			c.env.kv.put(dayKey, `${Number(dayCount || 0) + 1}`, { expirationTtl: 86400 })
+		]);
+		return false;
+	},
+
+	parseChatIds(value) {
+		return (value || '').split(',').map(item => item.trim()).filter(Boolean);
+	},
+
+	escapeHtml(value) {
+		return `${value || ''}`.replace(/[&<>"]/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[char]));
+	},
+
+	async reply(c, tgBotToken, chatId, text) {
 		try {
 			await fetch(`https://api.telegram.org/bot${tgBotToken}/sendMessage`, {
 				method: 'POST',
@@ -142,13 +237,12 @@ const telegramService = {
 				body: JSON.stringify({
 					chat_id: chatId,
 					parse_mode: 'HTML',
-					text: replyText
+					text
 				})
 			});
 		} catch (e) {
 			console.error(`Telegram webhook reply failed:`, e.message);
 		}
-
 	}
 
 }
