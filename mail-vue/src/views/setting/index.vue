@@ -23,6 +23,30 @@
         <div>{{$t('emailAccount')}}</div>
         <div>{{ userStore.user.email }}</div>
       </div>
+      <div class="item" v-if="hasPerm('telegram:set')">
+        <div>{{$t('telegramId')}}</div>
+        <div>
+          <span v-if="setTgChatIdShow" class="edit-name-input">
+            <el-input v-model="tgChatId"  ></el-input>
+            <span class="edit-name" @click="setTgChatId">
+             {{$t('save')}}
+            </span>
+          </span>
+          <span v-else class="tg-name">
+            <span >{{ userStore.user.account.tgChatId || $t('notSet') }}</span>
+            <span class="edit-name" @click="showSetTgChatId">
+             {{$t('change')}}
+            </span>
+            <span class="edit-name" style="color: #F56C6C" v-if="userStore.user.account.tgChatId" @click="unlinkTgChatId">
+             {{$t('unlink')}}
+            </span>
+          </span>
+          <div class="telegram-help" v-if="settingStore.settings.tgBotUsername">
+            <span>{{ $t('telegramIdGuide') }}</span>
+            <a :href="telegramBotLink" target="_blank">{{ telegramBotUsername }}</a>
+          </div>
+        </div>
+      </div>
       <div class="item">
         <div>{{$t('password')}}</div>
         <div>
@@ -38,8 +62,13 @@
           placeholder="Select"
           @change="changeLang"
       >
-        <el-option label="中文" value="zh" @pointerdown.prevent.stop="changeLang('zh')"/>
-        <el-option label="English" value="en" @pointerdown.prevent.stop="changeLang('en')"/>
+        <el-option
+            v-for="item in langOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+            @pointerdown.prevent.stop="changeLang(item.value)"
+        />
       </el-select>
     </div>
     <div class="del-email" v-perm="'my:delete'">
@@ -61,14 +90,16 @@
   </div>
 </template>
 <script setup>
-import {reactive, ref, defineOptions} from 'vue'
+import {reactive, ref, defineOptions, computed} from 'vue'
 import {resetPassword, userDelete} from "@/request/my.js";
 import {useUserStore} from "@/store/user.js";
 import router from "@/router/index.js";
-import {accountSetName} from "@/request/account.js";
+import {accountSetName, accountSetTgChatId} from "@/request/account.js";
 import {useAccountStore} from "@/store/account.js";
 import {useI18n} from "vue-i18n";
 import {useSettingStore} from "@/store/setting.js";
+import {hasPerm} from "@/perm/perm.js";
+import i18n, {availableLocales} from "@/i18n/index.js";
 
 const { t } = useI18n()
 const accountStore = useAccountStore()
@@ -77,11 +108,72 @@ const userStore = useUserStore();
 const setPwdLoading = ref(false)
 const setNameShow = ref(false)
 const accountName = ref(null)
+const setTgChatIdShow = ref(false)
+const tgChatId = ref('')
 const langSelect = ref(settingStore.lang)
+
+const langOptions = computed(() => {
+  const list = settingStore.settings.languages && settingStore.settings.languages.length
+      ? settingStore.settings.languages
+      : ['en', 'zh', 'id']
+  return list.map(v => {
+    const msg = i18n.global.getLocaleMessage(v)
+    return { value: v, label: msg?.langName || v }
+  })
+})
+
+const telegramBotUsername = computed(() => {
+  const username = settingStore.settings.tgBotUsername || ''
+  return username.startsWith('@') ? username : `@${username}`
+})
+const telegramBotLink = computed(() => {
+  const username = telegramBotUsername.value.replace('@', '')
+  return username ? `https://t.me/${username}` : ''
+})
 
 defineOptions({
   name: 'setting'
 })
+
+function showSetTgChatId() {
+  tgChatId.value = userStore.user.account.tgChatId || ''
+  setTgChatIdShow.value = true
+}
+
+function setTgChatId() {
+  const tgId = tgChatId.value
+  setTgChatIdShow.value = false
+
+  if (tgId === (userStore.user.account.tgChatId || '')) {
+    return
+  }
+
+  accountSetTgChatId(userStore.user.account.accountId, tgId).then(() => {
+    userStore.user.account.tgChatId = tgId
+    ElMessage({
+      message: t('saveSuccessMsg'),
+      type: 'success',
+      plain: true,
+    })
+  })
+}
+
+function unlinkTgChatId() {
+  ElMessageBox.confirm(t('telegramIdUnlinkConfirm'), {
+    confirmButtonText: t('confirm'),
+    cancelButtonText: t('cancel'),
+    type: 'warning'
+  }).then(() => {
+    accountSetTgChatId(userStore.user.account.accountId, '').then(() => {
+      userStore.user.account.tgChatId = ''
+      ElMessage({
+        message: t('saveSuccessMsg'),
+        type: 'success',
+        plain: true,
+      })
+    })
+  })
+}
 
 function showSetName() {
   accountName.value = userStore.user.name
@@ -123,6 +215,9 @@ function setName() {
 }
 
 function changeLang(lang) {
+  if (!langOptions.value.some(item => item.value === lang)) {
+    return
+  }
   let setting = {}
   try {
     setting = JSON.parse(localStorage.getItem('setting') || '{}')
@@ -245,6 +340,16 @@ function submitPwd() {
         }
       }
 
+      .tg-name {
+        display: flex;
+        align-items: center;
+        span:first-child {
+          overflow: hidden;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+        }
+      }
+
       .edit-name-input {
         position: absolute;
         bottom: -6px;
@@ -257,6 +362,18 @@ function submitPwd() {
         color: #4dabff;
         padding-left: 10px;
         cursor: pointer;
+      }
+
+      .telegram-help {
+        margin-top: 5px;
+        font-size: 12px;
+        color: #909399;
+        a {
+          color: #409eff;
+          text-decoration: none;
+          margin-left: 4px;
+          font-weight: bold;
+        }
       }
 
       @media (max-width: 767px) {

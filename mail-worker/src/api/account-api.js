@@ -23,6 +23,16 @@ app.put('/account/setName', async (c) => {
 	return c.json(result.ok());
 });
 
+app.put('/account/setTgChatId', async (c) => {
+	await accountService.setTgChatId(c, await c.req.json(), userContext.getUserId(c));
+	return c.json(result.ok());
+});
+
+app.put('/account/regenerateLinkCode', async (c) => {
+	const data = await accountService.regenerateLinkCode(c, await c.req.json(), userContext.getUserId(c));
+	return c.json(result.ok(data));
+});
+
 app.put('/account/setAllReceive', async (c) => {
 	await accountService.setAllReceive(c, await c.req.json(), userContext.getUserId(c));
 	return c.json(result.ok());

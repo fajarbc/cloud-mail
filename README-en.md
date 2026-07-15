@@ -65,6 +65,8 @@ With only one domain, you can create multiple different email addresses, similar
 
 - **🤖 CAPTCHA**: Integrated with Turnstile CAPTCHA to prevent automated registration.
 
+- **🌐 Multi-language**: Ships with Simplified Chinese, English, Bahasa Indonesia, Spanish, and French. The visible languages and default are controlled by the `languages` variable in `wrangler.toml` (first item is default). To add a new language, drop an `xx.js` file into `mail-vue/src/i18n/` — see the [i18n guide](./mail-vue/src/i18n/README.md).
+
 - **📜 More Features**: Under development...
 
 ## Tech Stack
@@ -109,7 +111,8 @@ cloud-mail
 │   │   ├── utils			    # Utility functions
 │   │   └── index.js			# Entry point
 │   ├── package.json			# Project dependencies
-│   └── wrangler.toml			# Project configuration
+│   ├── wrangler.example.toml		# Example configuration
+│   └── wrangler.toml			# Local configuration (not committed)
 │
 ├─ mail-vue				        # Frontend Vue project
 │   ├── src

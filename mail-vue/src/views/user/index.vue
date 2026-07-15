@@ -206,6 +206,8 @@
               <el-button type="primary" size="small">{{t('action')}}</el-button>
               <template #dropdown>
                 <el-dropdown-menu>
+                  <el-dropdown-item v-if="userStore.user.type === 0" @click="openSetAccountTgChatId(props.row)">{{ $t('telegramId') }}</el-dropdown-item>
+                  <el-dropdown-item v-if="userStore.user.type === 0 && props.row.tgChatId" @click="unlinkAccountTgChatId(props.row)">{{ $t('unlink') }}</el-dropdown-item>
                   <el-dropdown-item @click="deleteAccount(props.row)">{{ $t('delete') }}</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
@@ -223,6 +225,14 @@
             :total="accountParams.total"
             @current-change="accountCurChange"
         />
+      </div>
+    </el-dialog>
+    <el-dialog class="account-dialog" v-model="setAccountTgChatIdShow" :title="t('telegramId')" width="400">
+      <div class="dialog-box">
+        <el-input v-model="accountTgChatId" type="text" :placeholder="$t('telegramIdPlaceholder')" clearable autocomplete="off"/>
+        <el-button class="btn" type="primary" :loading="setAccountTgChatIdLoading" @click="submitAccountTgChatId"
+        >{{ $t('save') }}
+        </el-button>
       </div>
     </el-dialog>
     <el-dialog class="account-dialog" v-model="detailsShow" :title="t('userDetails')"  >
@@ -376,7 +386,8 @@ import {
   userRestSendCount,
   userRestore,
   userDeleteAccount,
-  userAllAccount
+  userAllAccount,
+  userSetAccountTgChatId
 } from '@/request/user.js'
 import {roleSelectUse} from "@/request/role.js";
 import {Icon} from "@iconify/vue";
@@ -475,6 +486,11 @@ const accountParams = reactive({
   userId: 0,
 })
 
+const setAccountTgChatIdShow = ref(false)
+const setAccountTgChatIdLoading = ref(false)
+const accountTgChatId = ref('')
+let accountTgChatIdRow = null
+
 roleSelectUse().then(list => {
   roleList.length = 0
   roleList.push(...list)
@@ -549,6 +565,45 @@ const handleContextmenu = (row, column, cell, event) => {
 
   row.checkedClass = 'checked-row';
   rightClickUser.value = row;
+}
+
+function openSetAccountTgChatId(account) {
+  accountTgChatIdRow = account
+  accountTgChatId.value = account.tgChatId || ''
+  setAccountTgChatIdShow.value = true
+}
+
+function submitAccountTgChatId() {
+  if (!accountTgChatIdRow) return
+  setAccountTgChatIdLoading.value = true
+  userSetAccountTgChatId(accountTgChatIdRow.accountId, accountTgChatId.value).then(() => {
+    accountTgChatIdRow.tgChatId = accountTgChatId.value
+    setAccountTgChatIdShow.value = false
+    ElMessage({
+      message: t('saveSuccessMsg'),
+      type: 'success',
+      plain: true
+    })
+  }).finally(() => {
+    setAccountTgChatIdLoading.value = false
+  })
+}
+
+function unlinkAccountTgChatId(account) {
+  ElMessageBox.confirm(t('telegramIdUnlinkConfirm'), {
+    confirmButtonText: t('confirm'),
+    cancelButtonText: t('cancel'),
+    type: 'warning'
+  }).then(() => {
+    userSetAccountTgChatId(account.accountId, '').then(() => {
+      account.tgChatId = ''
+      ElMessage({
+        message: t('saveSuccessMsg'),
+        type: 'success',
+        plain: true
+      })
+    })
+  })
 }
 
 function deleteAccount(account) {

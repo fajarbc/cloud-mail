@@ -30,13 +30,64 @@ const dbInit = {
 		await this.v2_9DB(c);
 		await this.v3_0DB(c);
 		await this.v3_2DB(c);
+		await this.v3_3DB(c);
+		await this.v3_4DB(c);
 		await settingService.refresh(c);
 		return c.text('success');
+	},
+
+	async v3_4DB(c) {
+		try {
+			await c.env.db.prepare(`ALTER TABLE setting ADD COLUMN tg_link INTEGER NOT NULL DEFAULT 1;`).run();
+		} catch (e) {
+			console.warn(`Skip setting tg_link: ${e.message}`);
+		}
+		try {
+			await c.env.db.prepare(`ALTER TABLE account ADD COLUMN link_code TEXT NOT NULL DEFAULT '';`).run();
+		} catch (e) {
+			console.warn(`Skip account link_code: ${e.message}`);
+		}
+		try {
+			await c.env.db.prepare(`UPDATE account SET link_code = lower(hex(randomblob(4))) WHERE link_code = '';`).run();
+		} catch (e) {
+			console.warn(`Skip backfill link_code: ${e.message}`);
+		}
+	},
+
+	async v3_3DB(c) {
+		try {
+			await c.env.db.prepare(`ALTER TABLE setting ADD COLUMN tg_bot_username TEXT NOT NULL DEFAULT '';`).run();
+		} catch (e) {
+			console.warn(`跳过：${e.message}`);
+		}
+		try {
+			await c.env.db.prepare(`
+				INSERT INTO perm (name, perm_key, pid, type, sort)
+				SELECT 'Telegram ID', 'telegram:set', 4, 2, 1
+				WHERE NOT EXISTS (SELECT 1 FROM perm WHERE perm_key = 'telegram:set');
+			`).run();
+
+			const permRow = await c.env.db.prepare(`SELECT perm_id FROM perm WHERE perm_key = 'telegram:set'`).first();
+			if (permRow) {
+				await c.env.db.prepare(`
+					INSERT INTO role_perm (role_id, perm_id)
+					SELECT 1, ?
+					WHERE NOT EXISTS (SELECT 1 FROM role_perm WHERE role_id = 1 AND perm_id = ?);
+				`).bind(permRow.perm_id, permRow.perm_id).run();
+			}
+		} catch (e) {
+			console.warn(`跳过：${e.message}`);
+		}
 	},
 
 	async v3_2DB(c) {
 		try {
 			await c.env.db.prepare(`ALTER TABLE setting ADD COLUMN smtp_configs TEXT NOT NULL DEFAULT '{}';`).run();
+		} catch (e) {
+			console.warn(`跳过字段：${e.message}`);
+		}
+		try {
+			await c.env.db.prepare(`ALTER TABLE account ADD COLUMN tg_chat_id TEXT NOT NULL DEFAULT '';`).run();
 		} catch (e) {
 			console.warn(`跳过字段：${e.message}`);
 		}

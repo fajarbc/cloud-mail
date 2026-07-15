@@ -12,7 +12,7 @@ import turnstileService from './turnstile-service';
 import roleService from './role-service';
 import { t } from '../i18n/i18n';
 import verifyRecordService from './verify-record-service';
-
+import cryptoUtils from '../utils/crypto-utils';
 const accountService = {
 
 	async add(c, params, userId) {
@@ -88,7 +88,7 @@ const accountService = {
 		}
 
 
-		accountRow = await orm(c).insert(account).values({ email: email, userId: userId, name: emailUtils.getName(email) }).returning().get();
+		accountRow = await orm(c).insert(account).values({ email: email, userId: userId, name: emailUtils.getName(email), linkCode: cryptoUtils.genHexCode(4) }).returning().get();
 
 		if (addEmailVerify === settingConst.addEmailVerify.COUNT && !addVerifyOpen) {
 			const row = await verifyRecordService.increaseAddCount(c);
@@ -215,6 +215,39 @@ const accountService = {
 			throw new BizError(t('usernameLengthLimit'));
 		}
 		await orm(c).update(account).set({name}).where(and(eq(account.userId, userId),eq(account.accountId, accountId))).run();
+	},
+
+	async setTgChatId(c, params, userId) {
+		let { tgChatId, accountId } = params
+		tgChatId = (tgChatId || '').trim()
+		if (tgChatId.length > 64) {
+			throw new BizError(t('telegramIdLengthLimit'));
+		}
+		await orm(c).update(account).set({tgChatId}).where(and(eq(account.userId, userId),eq(account.accountId, accountId))).run();
+	},
+
+	async regenerateLinkCode(c, params, userId) {
+		const { accountId } = params
+		const accountRow = await this.selectById(c, accountId)
+		if (!accountRow || accountRow.userId !== userId) {
+			throw new BizError(t('noUserAccount'));
+		}
+		const linkCode = cryptoUtils.genHexCode(4)
+		await orm(c).update(account).set({linkCode}).where(and(eq(account.userId, userId),eq(account.accountId, accountId))).run();
+		return { linkCode }
+	},
+
+	async adminSetTgChatId(c, params) {
+		const loginUser = c.get('user')
+		if (!loginUser || loginUser.email !== c.env.admin) {
+			throw new BizError(t('unauthorized'), 403)
+		}
+		let { tgChatId, accountId } = params
+		tgChatId = (tgChatId || '').trim()
+		if (tgChatId.length > 64) {
+			throw new BizError(t('telegramIdLengthLimit'));
+		}
+		await orm(c).update(account).set({tgChatId}).where(eq(account.accountId, accountId)).run();
 	},
 
 	async allAccount(c, params) {

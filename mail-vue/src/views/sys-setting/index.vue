@@ -555,9 +555,15 @@
         </template>
         <div class="forward-set-body">
           <el-input :placeholder="setting.tgBotToken || $t('tgBotToken')" v-model="tgBotToken"></el-input>
+          <el-input :placeholder="$t('tgBotUsernameDesc')" v-model="tgBotUsername"></el-input>
           <el-input-tag tag-type="warning" :placeholder="$t('toBotTokenDesc')" v-model="tgChatId"
                         @add-tag="addChatTag"></el-input-tag>
           <el-input tag-type="warning" :placeholder="$t('customDomainDesc')" v-model="customDomain" ></el-input>
+          <div class="tg-msg-label">
+            <span>{{t('telegramLink')}}</span>
+            <el-switch v-model="tgLink" :active-value="0" :inactive-value="1" :active-text="$t('enable')"
+                       :inactive-text="$t('disable')"/>
+          </div>
           <div class="tg-msg-label">
             <span>{{t('from')}}</span>
             <el-select  v-model="tgMsgFrom" >
@@ -967,7 +973,9 @@ const authRefreshOptions = computed(() => [
 const tgChatId = ref([])
 const customDomain = ref('')
 const tgBotStatus = ref(0)
+const tgLink = ref(1)
 const tgBotToken = ref('')
+const tgBotUsername = ref('')
 const forwardEmail = ref([])
 const forwardStatus = ref(0)
 const emailColumnWidth = ref(0)
@@ -1127,15 +1135,18 @@ function closedSetBackground() {
 }
 
 function openTgSetting() {
-  tgBotStatus.value = setting.value.tgBotStatus
+  const data = setting.value || {}
+  tgBotStatus.value = data.tgBotStatus ?? 1
+  tgLink.value = data.tgLink ?? 1
   tgBotToken.value = ''
-  customDomain.value = setting.value.customDomain
-  tgMsgFrom.value = setting.value.tgMsgFrom
-  tgMsgText.value = setting.value.tgMsgText
-  tgMsgTo.value = setting.value.tgMsgTo
+  tgBotUsername.value = data.tgBotUsername || ''
+  customDomain.value = data.customDomain || ''
+  tgMsgFrom.value = data.tgMsgFrom || 'only-name'
+  tgMsgText.value = data.tgMsgText || 'hide'
+  tgMsgTo.value = data.tgMsgTo || 'show'
   tgChatId.value = []
-  if (setting.value.tgChatId) {
-    const list = setting.value.tgChatId.split(',')
+  if (data.tgChatId) {
+    const list = data.tgChatId.split(',')
     tgChatId.value.push(...list)
   }
   tgSettingShow.value = true
@@ -1275,7 +1286,9 @@ function tgBotSave() {
   const form = {
     customDomain: customDomain.value,
     tgBotStatus: tgBotStatus.value,
+    tgLink: tgLink.value,
     tgChatId: tgChatId.value + '',
+    tgBotUsername: tgBotUsername.value,
     tgMsgFrom: tgMsgFrom.value,
     tgMsgText: tgMsgText.value,
     tgMsgTo: tgMsgTo.value

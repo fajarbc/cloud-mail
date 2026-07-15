@@ -21,7 +21,11 @@ export default {
 			 return await kvObjService.toObjResp( { env }, url.pathname.substring(1));
 		 }
 
-		return env.assets.fetch(req);
+		const resp = await env.assets.fetch(req);
+		if (url.pathname.startsWith('/assets/') && resp.headers.get('content-type')?.includes('text/html')) {
+			return new Response('Not found', { status: 404 });
+		}
+		return resp;
 	},
 	email: email,
 	async scheduled(c, env, ctx) {

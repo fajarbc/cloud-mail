@@ -54,4 +54,9 @@ app.delete('/user/deleteAccount', async (c) => {
 	return c.json(result.ok());
 });
 
+app.put('/user/setAccountTgChatId', async (c) => {
+	await accountService.adminSetTgChatId(c, await c.req.json());
+	return c.json(result.ok());
+});
+
 

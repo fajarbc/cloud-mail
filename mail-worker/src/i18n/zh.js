@@ -11,6 +11,7 @@ const zh = {
 	delMyAccount: '不可以删除自己的邮箱',
 	noUserAccount: '该邮箱不属于当前用户',
 	usernameLengthLimit: '用户名长度超出限制',
+	telegramIdLengthLimit: 'Telegram ID 长度超出限制',
 	noOsSendPic: '对象存储未配置不能发送正文图片',
 	noOsDomainSendAtt: '对象存储域名未配置不能发送附件',
 	noOsSendAtt: '对象存储未配置不能发送附件',
@@ -99,7 +100,8 @@ const zh = {
 		"系统设置": "系统设置",
 		"设置查看": "设置查看",
 		"设置修改": "设置修改",
-		'发件重置': '发件重置'
+		'发件重置': '发件重置',
+		"Telegram ID": "绑定 Telegram"
 	}
 }
 
