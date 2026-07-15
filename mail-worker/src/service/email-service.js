@@ -463,7 +463,7 @@ const emailService = {
 			body += `To: ${params.receiveEmail.join(', ')}\r\n`;
 			body += `Subject: ${params.subject}\r\n`;
 			body += 'MIME-Version: 1.0\r\n';
-			
+
 			if (params.sendType === 'reply' && params.messageId) {
 				body += `In-Reply-To: ${params.messageId}\r\n`;
 				body += `References: ${params.messageId}\r\n`;
@@ -474,17 +474,19 @@ const emailService = {
 			if (params.html || params.text) {
 				body += `--${boundary}\r\n`;
 				body += 'Content-Type: multipart/alternative; boundary="alt-' + boundary + '"\r\n\r\n';
-				
+
 				if (params.text) {
 					body += `--alt-${boundary}\r\n`;
 					body += 'Content-Type: text/plain; charset=utf-8\r\n\r\n';
-					body += `${params.text}\r\n\r\n`;
+					// Dot-stuffing for plain text
+					body += `${params.text.replace(/(^|\r\n)\./g, '$1..')}\r\n\r\n`;
 				}
-				
+
 				if (params.html) {
 					body += `--alt-${boundary}\r\n`;
 					body += 'Content-Type: text/html; charset=utf-8\r\n\r\n';
-					body += `${params.html}\r\n\r\n`;
+					// Dot-stuffing for HTML
+					body += `${params.html.replace(/(^|\r\n)\./g, '$1..')}\r\n\r\n`;
 				}
 				body += `--alt-${boundary}--\r\n\r\n`;
 			}
@@ -493,11 +495,11 @@ const emailService = {
 				for (const att of params.attachments) {
 					const base64Content = await this.toAttachmentBase64(att);
 					if (!base64Content) continue;
-					
+
 					body += `--${boundary}\r\n`;
 					const mimeType = att.contentType || att.mimeType || att.type || 'application/octet-stream';
 					const isInline = !!att.contentId;
-					
+
 					body += `Content-Type: ${mimeType}; name="${att.filename}"\r\n`;
 					body += 'Content-Transfer-Encoding: base64\r\n';
 					if (isInline) {
@@ -506,9 +508,11 @@ const emailService = {
 					} else {
 						body += `Content-Disposition: attachment; filename="${att.filename}"\r\n\r\n`;
 					}
-					
-					const lines = base64Content.match(/.{1,76}/g) || [];
-					body += lines.join('\r\n') + '\r\n\r\n';
+
+					for (let i = 0; i < base64Content.length; i += 76) {
+						body += base64Content.slice(i, i + 76) + '\r\n';
+					}
+					body += '\r\n';
 				}
 			}
 
@@ -539,7 +543,7 @@ const emailService = {
 			await readResponse();
 			await writeCommand(`EHLO ${host}`);
 			await readResponse();
-			
+
 			if (isStartTls) {
 				await writeCommand('STARTTLS');
 				const startTlsRes = await readResponse();
@@ -575,9 +579,13 @@ const emailService = {
 			await readResponse();
 
 			const messageBody = await buildMultipart();
-			await writeCommand(messageBody + '\r\n.');
+			// write raw body chunked to avoid memory spikes and dot-stuff edge cases at end
+			const writer = activeSocket.writable.getWriter();
+			// we can write in a few large chunks if the string is very big, but since we optimized base64 slicing, TextEncoder is safer
+			await writer.write(new TextEncoder().encode(messageBody + '.\r\n'));
+			writer.releaseLock();
 			const sendRes = await readResponse();
-			
+
 			await writeCommand('QUIT');
 			activeSocket.close();
 
@@ -671,8 +679,13 @@ const emailService = {
 		const bytes = new Uint8Array(arrayBuffer);
 		let binary = '';
 
-		for (let i = 0; i < bytes.length; i += 0x8000) {
-			binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+		for (let i = 0; i < bytes.length; i += 0x4000) {
+			const chunk = bytes.subarray(i, i + 0x4000);
+			let chunkStr = '';
+			for (let j = 0; j < chunk.length; j++) {
+				chunkStr += String.fromCharCode(chunk[j]);
+			}
+			binary += chunkStr;
 		}
 
 		return btoa(binary);
